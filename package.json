@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "npx browser-sync start --server --files \"src/*\" --no-open --no-notify --directory"
+    "dev": "npx browser-sync start --server 'src' --files 'src' --no-open --no-notify"
   },
   "author": "",
   "license": "WTFPL"
