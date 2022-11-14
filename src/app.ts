@@ -7,13 +7,11 @@ import {
   createReactRouter,
   createRouteConfig,
 } from 'https://esm.sh/@tanstack/react-router@0.0.1-beta.11?dev';
-import { TanStackRouterDevtools } from 'https://esm.sh/@tanstack/react-router-devtools@0.0.1-beta.10?dev';
+// import { TanStackRouterDevtools } from 'https://esm.sh/@tanstack/react-router-devtools@0.0.1-beta.10?dev';
 import { z } from 'https://esm.sh/zod@3.19.1?dev';
 
 async function wait(ms) {
-  console.log('waiting', ms);
   return new Promise(resolve => {
-    console.log('wait complete');
     setTimeout(resolve, ms);
   });
 }
@@ -21,12 +19,6 @@ async function wait(ms) {
 const routeConfig = createRouteConfig().createChildren((createRoute) => [
   createRoute({
     element: <Index />,
-    onMatch: function() {
-      console.log('index match', arguments);
-      return () => {
-        console.log('index match ended', arguments);
-      }
-    },
     path: '/',
   }),
   createRoute({
@@ -34,30 +26,26 @@ const routeConfig = createRouteConfig().createChildren((createRoute) => [
     path: 'about',
   }),
   createRoute({
+    element: <AccessDenied />,
+    path: '/access-denied'
+  }),
+  createRoute({
     meta: {
       doTheThing: true,
-    },
-    onMatch: function() {
-      console.log('article match', arguments);
-      return () => {
-        console.log('article match ended', arguments);
-      }
     },
     path: 'article',
   }).createChildren((createRoute) => [
     createRoute({
       element: <ArticleList />,
       errorElement: <ArticleListError />,
-      onMatch: function() {
-        console.log('article list match', arguments);
-        return () => {
-          console.log('article list match ended', arguments);
-        }
-      },
       path: '/',
     }),
     createRoute({
       element: <ArticleDetail />,
+      errorElement: <ArticleDetailError />,
+      meta: {
+        doAnotherThing: true,
+      },
       onMatch: function() {
         console.log('article detail match', arguments);
         return () => {
@@ -70,9 +58,31 @@ const routeConfig = createRouteConfig().createChildren((createRoute) => [
       }),
       stringifyParams: ({ id }) => ({ id: `${id}` }),
       loader: async ({ params: { id } }) => {
+        console.log('router is', Object.assign({}, router));
         await wait(Math.random() * 1000);
-        if (Math.random() >= .9) {
+
+        if (id === 10) {
           throw new Error('uh oh');
+        }
+
+        if (id === 4) {
+          // simulate a 403
+          /*[
+            ...router.state.matches,
+            ...(router.state.pending?.matches ?? []),
+          ].forEach((match) => {
+            match.cancel()
+          });*/
+          router.cancelMatches();
+          // console.log('history is', router.history);
+          
+          
+          router.navigationPromise.then(function() {
+            console.log('resolve', arguments);
+          }, function() {
+            console.log('reject', arguments);
+          });
+          // router.navigate({ replace: true, to: '/access-denied'});
         }
 
         return { id, something: 'hello' };
@@ -94,9 +104,9 @@ function App() {
         <hr />
         <Outlet />
       </RouterProvider>
-      <div>
+      {/*<div>
         <TanStackRouterDevtools router={router} initialIsOpen={true} />
-      </div>
+      </div>*/}
     </>
   )
 }
@@ -115,7 +125,7 @@ function About() {
       console.log("navigation success", arguments);
     },
     function() {
-      console.log("navigation failure", arguments);
+      console.log("navigation failure?", arguments);
     });
   };
 
@@ -125,6 +135,14 @@ function About() {
     </p>
     <button onClick={goToArticle} data-to={1} type="button">Go to article 1</button>
   </>);
+}
+
+function AccessDenied() {
+  return (
+    <>
+      <h1>Access Denied</h1>
+    </>
+  );
 }
 
 function ArticleList() {
@@ -185,6 +203,12 @@ function ArticleDetail() {
           params={{ id: match.params.id+1 }}
           to="article/:id">
           Next &gt;
+      </router.Link>
+      ::
+      <router.Link
+          params={{ id: 10 }}
+          to="article/:id">
+          Error state
       </router.Link>
       </div>
   );
